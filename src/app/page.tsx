@@ -1,44 +1,68 @@
-import { Metadata } from "next";
-import App from "./app";
+"use client";
+/** @jsxImportSource react */
 
-const appUrl = process.env.NEXT_PUBLIC_URL;
-
-// frame preview metadata
-const appName = process.env.NEXT_PUBLIC_FRAME_NAME;
-const splashImageUrl = `${appUrl}/splash.png`;
-const iconUrl = `${appUrl}/icon.png`;
-
-const framePreviewMetadata = {
-  version: "next",
-  imageUrl: `${appUrl}/opengraph-image`,
-  button: {
-    title: process.env.NEXT_PUBLIC_FRAME_BUTTON_TEXT,
-    action: {
-      type: "launch_frame",
-      name: appName,
-      url: appUrl,
-      splashImageUrl,
-      iconUrl,
-      splashBackgroundColor: "#f7f7f7",
-    },
-  },
-};
-
-export const revalidate = 300;
-
-export async function generateMetadata(): Promise<Metadata> {
-  return {
-    title: appName,
-    openGraph: {
-      title: appName,
-      description: process.env.NEXT_PUBLIC_FRAME_DESCRIPTION,
-    },
-    other: {
-      "fc:frame": JSON.stringify(framePreviewMetadata),
-    },
-  };
-}
+import { useEffect, useState } from "react";
+import { sdk } from "@farcaster/frame-sdk";
 
 export default function Home() {
-  return (<App />);
+  const [fid, setFid] = useState<number | null>(null);
+  const [step, setStep] = useState<"welcome" | "quiz">("welcome");
+
+  useEffect(() => {
+    sdk.actions.ready(); // Hide splash screen
+  }, []);
+
+  const handleSignIn = async () => {
+    try {
+      const { message } = await sdk.actions.signIn({
+        nonce: crypto.randomUUID(),
+      });
+      const parsedMessage = JSON.parse(message);
+      setFid(parsedMessage.fid);
+    } catch (error) {
+      console.error("Sign-in error:", error);
+    }
+  };
+
+  const handleStartQuiz = () => {
+    setStep("quiz");
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center w-[424px] h-[695px] bg-pink-200 text-center">
+      {step === "welcome" ? (
+        <>
+          <h1 className="text-2xl text-purple-400 mb-4">
+            Anime Husband Studio
+          </h1>
+          <p className="text-gray-700 mb-6 max-w-[80%]">
+            Craft your dream anime husband or butler! Sign in to begin.
+          </p>
+          {fid ? (
+            <>
+              <p className="text-yellow-500 mb-4">Welcome, FID: {fid}!</p>
+              <button
+                onClick={handleStartQuiz}
+                className="bg-purple-400 text-white px-6 py-2 rounded-full hover:bg-purple-500"
+              >
+                Start Quiz
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleSignIn}
+              className="bg-purple-400 text-white px-6 py-2 rounded-full hover:bg-purple-500"
+            >
+              Sign In
+            </button>
+          )}
+        </>
+      ) : (
+        <>
+          <h1 className="text-2xl text-purple-400 mb-4">Quiz Time!</h1>
+          <p className="text-gray-700">Let’s shape your anime soulmate.</p>
+        </>
+      )}
+    </div>
+  );
 }
