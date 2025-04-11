@@ -7,9 +7,10 @@ import { sdk } from "@farcaster/frame-sdk";
 export default function Home() {
   const [fid, setFid] = useState<number | null>(null);
   const [step, setStep] = useState<"welcome" | "quiz">("welcome");
+  const [answers, setAnswers] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
-    sdk.actions.ready(); // Hide splash screen
+    sdk.actions.ready();
   }, []);
 
   const handleSignIn = async () => {
@@ -24,9 +25,19 @@ export default function Home() {
     }
   };
 
-  const handleStartQuiz = () => {
-    setStep("quiz");
+  const handleStartQuiz = () => setStep("quiz");
+
+  const handleAnswer = (question: string, answer: string) => {
+    setAnswers((prev) => ({ ...prev, [question]: answer }));
   };
+
+  const questions = [
+    { q: "His charm is:", opts: ["Witty", "Gentle", "Bold", "Mysterious"] },
+    { q: "His hair color:", opts: ["Silver", "Black", "Gold", "Blue"] },
+    { q: "His eyes:", opts: ["Blue", "Green", "Amber", "Violet"] },
+    { q: "His outfit:", opts: ["Black Suit", "Cape", "Jacket", "Kimono"] },
+    { q: "His gift:", opts: ["Rose", "Poem", "Song", "Star Map"] },
+  ];
 
   return (
     <div className="flex flex-col items-center justify-center w-[424px] h-[695px] bg-pink-200 text-center">
@@ -60,7 +71,29 @@ export default function Home() {
       ) : (
         <>
           <h1 className="text-2xl text-purple-400 mb-4">Quiz Time!</h1>
-          <p className="text-gray-700">Let’s shape your anime soulmate.</p>
+          <p className="text-gray-700 mb-4">Shape your anime soulmate.</p>
+          <div className="space-y-4">
+            {questions.slice(0, 5).map((item, idx) => (
+              <div key={idx}>
+                <p className="text-gray-700">{item.q}</p>
+                <div className="flex gap-2 justify-center">
+                  {item.opts.map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => handleAnswer(item.q, opt)}
+                      className={`px-3 py-1 rounded-full text-white ${
+                        answers[item.q] === opt
+                          ? "bg-purple-500"
+                          : "bg-purple-400"
+                      } hover:bg-purple-500`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </>
       )}
     </div>
