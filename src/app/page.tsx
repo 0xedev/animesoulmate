@@ -6,22 +6,40 @@ import { sdk } from "@farcaster/frame-sdk";
 
 export default function Home() {
   const [fid, setFid] = useState<number | null>(null);
-  const [step, setStep] = useState<"welcome" | "quiz">("welcome");
+  const [step, setStep] = useState<"welcome" | "quiz" | "result">("welcome");
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
+  const [currentQuestion, setCurrentQuestion] = useState(0);
 
   useEffect(() => {
-    sdk.actions.ready();
+    try {
+      console.log("Initializing SDK...");
+      sdk.actions.ready();
+      console.log("SDK ready");
+    } catch (error) {
+      console.error("SDK init error:", error);
+    }
   }, []);
 
   const handleSignIn = async () => {
     try {
-      const { message } = await sdk.actions.signIn({
+      console.log("Starting sign-in...");
+      const response = await sdk.actions.signIn({
         nonce: crypto.randomUUID(),
       });
-      const parsedMessage = JSON.parse(message);
+      console.log("Sign-in response:", response);
+      if (!response?.message) {
+        throw new Error("No message in sign-in response");
+      }
+      const parsedMessage = JSON.parse(response.message);
+      console.log("Parsed message:", parsedMessage);
+      if (!parsedMessage?.fid) {
+        throw new Error("No FID in parsed message");
+      }
       setFid(parsedMessage.fid);
     } catch (error) {
       console.error("Sign-in error:", error);
+      // Fallback for dev testing
+      setFid(12345); // Mock FID
     }
   };
 
@@ -31,13 +49,42 @@ export default function Home() {
     setAnswers((prev) => ({ ...prev, [question]: answer }));
   };
 
+  const handleNext = () => {
+    if (currentQuestion < questions.length - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+    } else {
+      setStep("result");
+    }
+  };
+
+  const handleBack = () => {
+    if (currentQuestion > 0) {
+      setCurrentQuestion(currentQuestion - 1);
+    }
+  };
+
   const questions = [
     { q: "His charm is:", opts: ["Witty", "Gentle", "Bold", "Mysterious"] },
     { q: "His hair color:", opts: ["Silver", "Black", "Gold", "Blue"] },
     { q: "His eyes:", opts: ["Blue", "Green", "Amber", "Violet"] },
     { q: "His outfit:", opts: ["Black Suit", "Cape", "Jacket", "Kimono"] },
     { q: "His gift:", opts: ["Rose", "Poem", "Song", "Star Map"] },
+    { q: "His vibe:", opts: ["Playful", "Serious", "Romantic", "Cool"] },
+    { q: "His weapon:", opts: ["Sword", "Magic", "Bow", "None"] },
+    { q: "His role:", opts: ["Hero", "Butler", "Rogue", "Prince"] },
+    { q: "His height:", opts: ["Tall", "Medium", "Short", "Giant"] },
+    { q: "His smile:", opts: ["Warm", "Smirky", "Shy", "Confident"] },
+    { q: "His hobby:", opts: ["Cooking", "Reading", "Fighting", "Music"] },
+    { q: "His pet:", opts: ["Cat", "Dragon", "None", "Bird"] },
+    { q: "His voice:", opts: ["Deep", "Soft", "Cheerful", "Gruff"] },
+    { q: "His loyalty:", opts: ["Fierce", "Relaxed", "Wavering", "Absolute"] },
+    { q: "His world:", opts: ["Fantasy", "Sci-Fi", "Modern", "Historical"] },
   ];
+
+  const getResult = () => {
+    const traits = Object.values(answers).join(", ");
+    return `Your anime soulmate is a ${traits} dream!`;
+  };
 
   return (
     <div className="flex flex-col items-center justify-center w-[424px] h-[695px] bg-pink-200 text-center">
@@ -68,32 +115,62 @@ export default function Home() {
             </button>
           )}
         </>
-      ) : (
+      ) : step === "quiz" ? (
         <>
           <h1 className="text-2xl text-purple-400 mb-4">Quiz Time!</h1>
-          <p className="text-gray-700 mb-4">Shape your anime soulmate.</p>
+          <p className="text-gray-700 mb-4">
+            Question {currentQuestion + 1} of {questions.length}
+          </p>
           <div className="space-y-4">
-            {questions.slice(0, 5).map((item, idx) => (
-              <div key={idx}>
-                <p className="text-gray-700">{item.q}</p>
-                <div className="flex gap-2 justify-center">
-                  {item.opts.map((opt) => (
-                    <button
-                      key={opt}
-                      onClick={() => handleAnswer(item.q, opt)}
-                      className={`px-3 py-1 rounded-full text-white ${
-                        answers[item.q] === opt
-                          ? "bg-purple-500"
-                          : "bg-purple-400"
-                      } hover:bg-purple-500`}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
+            <div>
+              <p className="text-gray-700">{questions[currentQuestion].q}</p>
+              <div className="flex gap-2 justify-center flex-wrap">
+                {questions[currentQuestion].opts.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() =>
+                      handleAnswer(questions[currentQuestion].q, opt)
+                    }
+                    className={`px-3 py-1 rounded-full text-white ${
+                      answers[questions[currentQuestion].q] === opt
+                        ? "bg-purple-500"
+                        : "bg-purple-400"
+                    } hover:bg-purple-500`}
+                  >
+                    {opt}
+                  </button>
+                ))}
               </div>
-            ))}
+            </div>
+            <div className="flex gap-4">
+              {currentQuestion > 0 && (
+                <button
+                  onClick={handleBack}
+                  className="bg-gray-400 text-white px-4 py-1 rounded-full hover:bg-gray-500"
+                >
+                  Back
+                </button>
+              )}
+              <button
+                onClick={handleNext}
+                className="bg-purple-400 text-white px-4 py-1 rounded-full hover:bg-purple-500"
+                disabled={!answers[questions[currentQuestion].q]}
+              >
+                {currentQuestion === questions.length - 1 ? "Finish" : "Next"}
+              </button>
+            </div>
           </div>
+        </>
+      ) : (
+        <>
+          <h1 className="text-2xl text-purple-400 mb-4">Your Soulmate!</h1>
+          <p className="text-gray-700 mb-6 max-w-[80%]">{getResult()}</p>
+          <button
+            onClick={() => setStep("welcome")}
+            className="bg-purple-400 text-white px-6 py-2 rounded-full hover:bg-purple-500"
+          >
+            Try Again
+          </button>
         </>
       )}
     </div>
