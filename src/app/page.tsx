@@ -20,8 +20,6 @@ export default function Home() {
       await signIn("farcaster"); // Trigger Farcaster sign-in
     } catch (error) {
       console.error("Sign-in error:", error);
-      // Fallback for dev
-      setFid(12345);
     }
   };
 
@@ -157,7 +155,4 @@ export default function Home() {
       )}
     </div>
   );
-}
-function setFid(arg0: number) {
-  throw new Error("Function not implemented.");
 }
