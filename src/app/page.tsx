@@ -2,44 +2,26 @@
 /** @jsxImportSource react */
 
 import { useEffect, useState } from "react";
-import { sdk } from "@farcaster/frame-sdk";
+import { signIn, useSession } from "next-auth/react";
 
 export default function Home() {
-  const [fid, setFid] = useState<number | null>(null);
   const [step, setStep] = useState<"welcome" | "quiz" | "result">("welcome");
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  const { data: session, status } = useSession();
 
   useEffect(() => {
-    try {
-      console.log("Initializing SDK...");
-      sdk.actions.ready();
-      console.log("SDK ready");
-    } catch (error) {
-      console.error("SDK init error:", error);
-    }
-  }, []);
+    console.log("Session status:", status, "Session:", session);
+  }, [session, status]);
 
   const handleSignIn = async () => {
     try {
       console.log("Starting sign-in...");
-      const response = await sdk.actions.signIn({
-        nonce: crypto.randomUUID(),
-      });
-      console.log("Sign-in response:", response);
-      if (!response?.message) {
-        throw new Error("No message in sign-in response");
-      }
-      const parsedMessage = JSON.parse(response.message);
-      console.log("Parsed message:", parsedMessage);
-      if (!parsedMessage?.fid) {
-        throw new Error("No FID in parsed message");
-      }
-      setFid(parsedMessage.fid);
+      await signIn("farcaster"); // Trigger Farcaster sign-in
     } catch (error) {
       console.error("Sign-in error:", error);
-      // Fallback for dev testing
-      setFid(12345); // Mock FID
+      // Fallback for dev
+      setFid(12345);
     }
   };
 
@@ -90,15 +72,15 @@ export default function Home() {
     <div className="flex flex-col items-center justify-center w-[424px] h-[695px] bg-pink-200 text-center">
       {step === "welcome" ? (
         <>
-          <h1 className="text-2xl text-purple-400 mb-4">
-            Anime Husband Studio
-          </h1>
+          <h1 className="text-2xl text-purple-400 mb-4">Anime Studio</h1>
           <p className="text-gray-700 mb-6 max-w-[80%]">
             Craft your dream anime husband or butler! Sign in to begin.
           </p>
-          {fid ? (
+          {session?.user?.fid || status === "authenticated" ? (
             <>
-              <p className="text-yellow-500 mb-4">Welcome, FID: {fid}!</p>
+              <p className="text-yellow-500 mb-4">
+                Welcome, FID: {session?.user?.fid || "Guest"}!
+              </p>
               <button
                 onClick={handleStartQuiz}
                 className="bg-purple-400 text-white px-6 py-2 rounded-full hover:bg-purple-500"
@@ -175,4 +157,7 @@ export default function Home() {
       )}
     </div>
   );
+}
+function setFid(arg0: number) {
+  throw new Error("Function not implemented.");
 }
